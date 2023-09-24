@@ -1,0 +1,4 @@
+Episode: 527
+Steps Taken: 2816
+terminal_reward: -522.2816122184305
+mean_reward: -12914.864499188208

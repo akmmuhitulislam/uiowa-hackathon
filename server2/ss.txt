@@ -1,0 +1,119 @@
+class BusArrayEnv(gym.Env):
+   
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self, 
+                 df,
+                 df_true,
+                step_index = 0,
+                episode_no = 0,
+                save_logs = True,
+                env_type = "train"):
+        
+        self.type = env_type
+        self.df = df
+        self.df_true = df_true
+        self.save_logs = save_logs
+        #self.action_space = spaces.Discrete(2,)
+        self.action_space = spaces.Box(low = 0, high = 500,shape = (1,)) 
+        # [remaining cash] + [stock price] + [technical features] + [number of stocks]
+        self.observation_space = spaces.Box(low=-np.inf, 
+                                            high=np.inf, 
+                                            shape = (df.shape[1],))
+
+        # load data from a pandas dataframe
+        # self.data = self.df.loc[[self.step_index]]
+        # [0] for drawdown till now + [0] is for % of cash/initial_amount + [0] for % return since last purchase from 0 stocks + [0] for action + 7 x [0] for pct change in asset memories
+        self.step_index = step_index
+        self.state = self.df[step_index,:]
+        self.truth = self.df_true[step_index]
+        self.terminal = False           
+
+        self.reward = 0.0   
+        
+        self.episode_count = episode_no
+        
+        self.reward_memory = []
+        self.date_memory=[]
+        self.action_memory = []
+        self.truth_memory = []
+
+    def _append_memories(self, action):
+        # store memories
+        self.action_memory.append(action)    
+        self.date_memory.append(int(self.state[0]))
+        self.truth_memory.append(self.truth)   
+        self.reward_memory.append(self.reward)
+        #self.action_required_asset.append(required_stock_amount
+    
+
+    def _terminal_step(self, action=None):
+        self.reward = -((action - self.truth)**2 )
+        self._append_memories(action)
+        #self.step_index += 1
+        #self.state = self.df[self.step_index,:]
+        #self.truth = self.df_true[self.step_index]
+        logs_df = pd.DataFrame()
+
+        logs_df['date'] = self.date_memory
+        logs_df['action'] = self.action_memory
+        logs_df['truth'] = self.truth_memory
+        logs_df['reward'] = self.reward_memory      
+        #import pdb; pdb.set_trace()
+        #logs_df.drop('return_pct_change',axis=1)
+        logs_df.to_csv(f"results/logs/log_episode_{self.episode_count}.csv",index=False)
+        
+        
+        if self.save_logs:
+            with open(f"results/logs/consol_log_{self.episode_count}.txt","w+") as f:
+                f.write(f"Episode: {self.episode_count}\nSteps Taken: {self.step_index+1}\nterminal_reward: {self.reward}\nmean_reward: {sum(self.reward_memory)/len(self.reward_memory)}\n")
+
+        #self._apply_reward_threshold_alpha(alpha=self.reward_threshold_alpha)
+        #self.reward = self.cumulative_reward
+        self.episode_count += 1
+        
+        
+    def step(self, action):
+        action = round(float(action),4)
+        self.terminal = self.step_index >= self.df.shape[0] -1
+        
+            
+        if self.terminal:
+           self._terminal_step(action=action)
+            
+        else:
+            
+            self.reward = (action - self.truth)**2 
+            self._append_memories(action)
+            self.step_index += 1
+            self.state = self.df[self.step_index,:]
+            self.truth = self.df_true[self.step_index]
+            
+            #self.date_memory.append(int(self.state[0]))      
+
+        return self.state, self.reward, self.terminal, {}
+        
+
+    def reset(self):
+        self.step_index = 0
+        self.state = self.df[self.step_index,:]
+        self.truth = self.df_true[self.step_index]
+        self.terminal = False           
+
+        self.reward = 0.0   
+        self.reward_memory = []
+        self.date_memory=[]
+        self.action_memory = []
+        self.truth_memory = []
+
+
+        return self.state
+    
+    def render(self, mode='human'):
+        return self.state, self.cash, self.stocks_owned, self.close_price
+    
+    def sigmoid_sign(ary, thresh):
+        def sigmoid(x):
+            return 1 / (1 + np.exp(-x * np.e)) - 0.5
+
+        return sigmoid(ary / thresh) * thresh

@@ -1,0 +1,4 @@
+Episode: 5001
+Steps Taken: 67584
+terminal_reward: -19577.74632025
+mean_reward: -7015.813505691439

@@ -1,0 +1,4 @@
+Episode: 441
+Steps Taken: 2816
+terminal_reward: -2497.458786363883
+mean_reward: -8526.530218330552
